@@ -22,24 +22,54 @@ AbRArrow rightArrow = {abRArrowGetBounds, abRArrowCheck, 30};
 
 AbRectOutline fieldOutline = {	/* playing field */
   abRectOutlineGetBounds, abRectOutlineCheck,   
-  {screenWidth/2 - 10, screenHeight/2 - 10}
+  {screenWidth/2-10, screenHeight/2-10}
 };
 
-Layer layer4 = {
-  (AbShape *)&rightArrow,
-  {(screenWidth/2)+10, (screenHeight/2)+5}, /**< bit below & right of center */
-  {0,0}, {0,0},				    /* last & next pos */
-  COLOR_PINK,
+AbRect rectGrass = {abRectGetBounds, abRectCheck, {200, 10}};; /**< 10x10 rectangle */
+AbRect rectGround = {abRectGetBounds, abRectCheck, {200, 40}};; /**< 10x10 rectangle */
+
+u_int bgColor = COLOR_GRAY;
+
+Layer layer4 = {		/**< GROUND LAYER */
+  (AbShape *)&rectGround,
+  {(screenWidth), (screenHeight)}, /**< bit below & right of center */
+  {0,0}, {0,0},				    /* next & last pos */
+  COLOR_CHOCOLATE,
   0
 };
-  
 
-Layer layer3 = {		/**< Layer with an orange circle */
-  (AbShape *)&circle8,
-  {(screenWidth/2)+10, (screenHeight/2)+5}, /**< bit below & right of center */
-  {0,0}, {0,0},				    /* last & next pos */
-  COLOR_VIOLET,
+Layer layer3 = {		/**< GRASS LAYER */
+  (AbShape *)&rectGrass,
+  {(screenWidth), (screenHeight)-50}, /**< bit below & right of center */
+  {0,0}, {0,0},				    /* next & last pos */
+  COLOR_GREEN,
   &layer4,
+};
+
+Layer layer2 = {		/**< KIRBY'S LEFT FOOT LAYER */
+  (AbShape *)&circle6,
+  {(screenWidth/2)-10, (screenHeight/2)+10}, /**< bit below & right of center */
+  {0,0}, {0,0},				    /* next & last pos */
+  COLOR_MAGENTA,
+  &layer3,
+};
+
+
+Layer layer1 = {		/**< KIRBY'S BODY LAYER */
+  (AbShape *)&circle14,
+  {screenWidth/2, screenHeight/2}, /**< center */
+  {0,0}, {0,0},				    /* next & last pos */
+  COLOR_PINK,
+  &layer2,
+};
+
+
+Layer layer0 = {		/**< KIRBY'S RIGHT FOOT LAYER */
+  (AbShape *)&circle6,
+  {(screenWidth/2)+10, (screenHeight/2)+10}, /**< bit below & right of center */
+  {0,0}, {0,0},				    /* next & last pos */
+  COLOR_MAGENTA,
+  &layer1,
 };
 
 
@@ -47,24 +77,8 @@ Layer fieldLayer = {		/* playing field as a layer */
   (AbShape *) &fieldOutline,
   {screenWidth/2, screenHeight/2},/**< center */
   {0,0}, {0,0},				    /* last & next pos */
-  COLOR_BLACK,
-  &layer3
-};
-
-Layer layer1 = {		/**< Layer with a red square */
-  (AbShape *)&rect10,
-  {screenWidth/2, screenHeight/2}, /**< center */
-  {0,0}, {0,0},				    /* last & next pos */
-  COLOR_RED,
-  &fieldLayer,
-};
-
-Layer layer0 = {		/**< Layer with an orange circle */
-  (AbShape *)&circle14,
-  {(screenWidth/2)+10, (screenHeight/2)+5}, /**< bit below & right of center */
-  {0,0}, {0,0},				    /* last & next pos */
-  COLOR_ORANGE,
-  &layer1,
+  COLOR_GRAY,
+  &layer0
 };
 
 /** Moving Layer
@@ -78,9 +92,9 @@ typedef struct MovLayer_s {
 } MovLayer;
 
 /* initial value of {0,0} will be overwritten */
-MovLayer ml3 = { &layer3, {1,1}, 0 }; /**< not all layers move */
-MovLayer ml1 = { &layer1, {1,2}, &ml3 }; 
-MovLayer ml0 = { &layer0, {2,1}, &ml1 }; 
+MovLayer ml3 = { &layer2, {1,1}, 0 }; /**< not all layers move */
+//MovLayer ml1 = { &layer1, {1,1}, &ml3 }; 
+MovLayer ml0 = { &layer0, {1,1}, &ml3 }; 
 
 void movLayerDraw(MovLayer *movLayers, Layer *layers)
 {
@@ -121,7 +135,7 @@ void movLayerDraw(MovLayer *movLayers, Layer *layers)
 
 
 
-//Region fence = {{10,30}, {SHORT_EDGE_PIXELS-10, LONG_EDGE_PIXELS-10}}; /**< Create a fence region */
+Region fence = {{screenWidth/2-17,screenHeight/2}, {screenWidth/2+17, screenHeight/2}}; /**< Create a fence region */
 
 /** Advances a moving shape within a fence
  *  
@@ -148,7 +162,6 @@ void mlAdvance(MovLayer *ml, Region *fence)
 }
 
 
-u_int bgColor = COLOR_BLUE;     /**< The background color */
 int redrawScreen = 1;           /**< Boolean for whether screen needs to be redrawn */
 
 Region fieldFence;		/**< fence around playing field  */
@@ -198,7 +211,7 @@ void wdt_c_handler()
   P1OUT |= GREEN_LED;		      /**< Green LED on when cpu on */
   count ++;
   if (count == 15) {
-    mlAdvance(&ml0, &fieldFence);
+    mlAdvance(&ml0, &fence);
     if (p2sw_read())
       redrawScreen = 1;
     count = 0;
