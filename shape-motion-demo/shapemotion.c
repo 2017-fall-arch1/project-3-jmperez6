@@ -30,39 +30,69 @@ AbRect rectGround = {abRectGetBounds, abRectCheck, {200, 40}};; /**< 10x10 recta
 
 u_int bgColor = COLOR_GRAY;
 
-Layer layer4 = {		/**< GROUND LAYER */
+
+
+Layer apple = {
+  (AbShape *) &circle5,
+  {0, 0},/**< top right corner */
+  {0,0}, {screenWidth-10,10},				    /* last & next pos */
+  COLOR_RED,
+  0,
+};
+ 
+
+Layer layer6 = {		/**< GROUND LAYER */
   (AbShape *)&rectGround,
   {(screenWidth), (screenHeight)}, /**< bit below & right of center */
   {0,0}, {0,0},				    /* next & last pos */
   COLOR_CHOCOLATE,
-  0
+  0,
 };
 
-Layer layer3 = {		/**< GRASS LAYER */
+Layer layer5 = {		/**< GRASS LAYER */
   (AbShape *)&rectGrass,
   {(screenWidth), (screenHeight)-50}, /**< bit below & right of center */
   {0,0}, {0,0},				    /* next & last pos */
   COLOR_GREEN,
-  &layer4,
+  &layer6,
 };
 
-Layer layer2 = {		/**< KIRBY'S LEFT FOOT LAYER */
+
+
+Layer layer4 = {		/**< KIRBY'S LEFT FOOT LAYER */
   (AbShape *)&circle6,
   {(screenWidth/2)-10, (screenHeight/2)+10}, /**< bit below & right of center */
   {0,0}, {0,0},				    /* next & last pos */
   COLOR_MAGENTA,
-  &layer3,
+  &layer5,
 };
 
 
-Layer layer1 = {		/**< KIRBY'S BODY LAYER */
+
+
+Layer layer3 = {		/**< KIRBY'S BODY LAYER */
   (AbShape *)&circle14,
   {screenWidth/2, screenHeight/2}, /**< center */
   {0,0}, {0,0},				    /* next & last pos */
   COLOR_PINK,
-  &layer2,
+  &layer4,
 };
 
+Layer layer2 = {		/**< KIRBY'S SCLERA */
+  (AbShape *)&circle4,
+  {screenWidth/2+8, screenHeight/2-8}, /**< center */
+  {0,0}, {0,0},				    /* next & last pos */
+  COLOR_BLACK,
+  &layer3,
+};
+
+Layer layer1 = {		/**< KIRBY'S PUPIL */
+  (AbShape *)&circle2,
+  {screenWidth/2+8, screenHeight/2-10}, /**< center */
+  {0,0}, {0,0},				    /* next & last pos */
+  COLOR_WHITE,
+  &layer2,
+};
 
 Layer layer0 = {		/**< KIRBY'S RIGHT FOOT LAYER */
   (AbShape *)&circle6,
@@ -81,6 +111,14 @@ Layer fieldLayer = {		/* playing field as a layer */
   &layer0
 };
 
+
+
+
+
+
+
+
+
 /** Moving Layer
  *  Linked list of layer references
  *  Velocity represents one iteration of change (direction & magnitude)
@@ -92,9 +130,18 @@ typedef struct MovLayer_s {
 } MovLayer;
 
 /* initial value of {0,0} will be overwritten */
-MovLayer ml3 = { &layer2, {1,1}, 0 }; /**< not all layers move */
+MovLayer ml3 = { &layer4, {1,0}, 0 }; /**< not all layers move */
 //MovLayer ml1 = { &layer1, {1,1}, &ml3 }; 
-MovLayer ml0 = { &layer0, {1,1}, &ml3 }; 
+MovLayer ml0 = { &layer0, {1,0}, &ml3 };
+
+MovLayer mapple = { &apple, {-1,0}, 0 };
+
+
+
+
+
+
+
 
 void movLayerDraw(MovLayer *movLayers, Layer *layers)
 {
@@ -135,7 +182,10 @@ void movLayerDraw(MovLayer *movLayers, Layer *layers)
 
 
 
-Region fence = {{screenWidth/2-17,screenHeight/2}, {screenWidth/2+17, screenHeight/2}}; /**< Create a fence region */
+Region fence = {{screenWidth/2 - 16,screenHeight/2}, {screenWidth/2 + 16,screenHeight/2}}; /**< Create a fence region */
+Region fence2 = {{0,0}, {screenWidth, screenHeight/2}}; /**< Create a fence region */
+
+
 
 /** Advances a moving shape within a fence
  *  
@@ -162,6 +212,23 @@ void mlAdvance(MovLayer *ml, Region *fence)
 }
 
 
+void HorizontalAdvance(MovLayer *ml, Region *fence)
+{
+  Vec2 newPos;
+  Region shapeBoundary;
+  for (; ml; ml = ml->next) {
+    vec2Add(&newPos, &ml->layer->posNext, &ml->velocity);
+    abShapeGetBounds(ml->layer->abShape, &newPos, &shapeBoundary);
+      if ((shapeBoundary.topLeft.axes[0] < fence->topLeft.axes[0]) ||
+	  (shapeBoundary.botRight.axes[0] > fence->botRight.axes[0]) ) {
+	int velocity = ml->velocity.axes[0] = -ml->velocity.axes[0];
+	newPos.axes[0] += (2*velocity);
+      }	/**< if outside of fence */
+    ml->layer->posNext = newPos;
+  } /**< for ml */
+}
+
+
 int redrawScreen = 1;           /**< Boolean for whether screen needs to be redrawn */
 
 Region fieldFence;		/**< fence around playing field  */
@@ -183,8 +250,11 @@ void main()
   shapeInit();
 
   layerInit(&layer0);
+  //layerInit(&apple);
   layerDraw(&layer0);
-
+  //layerDraw(&apple);
+  
+  
 
   layerGetBounds(&fieldLayer, &fieldFence);
 
@@ -201,6 +271,7 @@ void main()
     P1OUT |= GREEN_LED;       /**< Green led on when CPU on */
     redrawScreen = 0;
     movLayerDraw(&ml0, &layer0);
+    movLayerDraw(&mapple, &apple);
   }
 }
 
@@ -208,13 +279,18 @@ void main()
 void wdt_c_handler()
 {
   static short count = 0;
+  static short obsCount = 0;
   P1OUT |= GREEN_LED;		      /**< Green LED on when cpu on */
   count ++;
-  if (count == 15) {
-    mlAdvance(&ml0, &fence);
-    if (p2sw_read())
-      redrawScreen = 1;
+  obsCount ++;
+  if (count == 5) {
+    
+    if (p2sw_read()){
+      HorizontalAdvance(&ml0, &fence);
+      HorizontalAdvance(&mapple, &fieldFence);
+      redrawScreen = 1;}
     count = 0;
-  } 
+  }
+    
   P1OUT &= ~GREEN_LED;		    /**< Green LED off when cpu off */
 }
