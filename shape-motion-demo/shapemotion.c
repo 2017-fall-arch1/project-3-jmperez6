@@ -34,8 +34,8 @@ u_int bgColor = COLOR_GRAY;
 
 Layer apple = {
   (AbShape *) &circle5,
-  {0, 0},/**< top right corner */
-  {0,0}, {screenWidth-10,10},				    /* last & next pos */
+  {screenWidth+50,10},/**< top right corner */
+  {0,0}, {0,0},				    /* last & next pos */
   COLOR_RED,
   0,
 };
@@ -46,7 +46,7 @@ Layer layer6 = {		/**< GROUND LAYER */
   {(screenWidth), (screenHeight)}, /**< bit below & right of center */
   {0,0}, {0,0},				    /* next & last pos */
   COLOR_CHOCOLATE,
-  0,
+  &apple,
 };
 
 Layer layer5 = {		/**< GRASS LAYER */
@@ -130,9 +130,13 @@ typedef struct MovLayer_s {
 } MovLayer;
 
 /* initial value of {0,0} will be overwritten */
-MovLayer ml3 = { &layer4, {1,0}, 0 }; /**< not all layers move */
-//MovLayer ml1 = { &layer1, {1,1}, &ml3 }; 
-MovLayer ml0 = { &layer0, {1,0}, &ml3 };
+
+MovLayer ml3 = { &layer3, {0,1}, 0}; /**< not all layers move */
+MovLayer ml2 = { &layer2, {0,1}, &ml3 };
+MovLayer ml1 = { &layer1, {0,1}, &ml2 }; 
+
+MovLayer ml4 = { &layer4, {1,0}, 0 };
+MovLayer ml0 = { &layer0, {1,0}, &ml4 };
 
 MovLayer mapple = { &apple, {-1,0}, 0 };
 
@@ -182,8 +186,8 @@ void movLayerDraw(MovLayer *movLayers, Layer *layers)
 
 
 
-Region fence = {{screenWidth/2 - 16,screenHeight/2}, {screenWidth/2 + 16,screenHeight/2}}; /**< Create a fence region */
-Region fence2 = {{0,0}, {screenWidth, screenHeight/2}}; /**< Create a fence region */
+Region fence = {{screenWidth/2 - 16, 10}, {screenWidth/2 + 16, 100}}; /**< Create a fence region */
+Region fence2 = {{10,0}, {screenWidth, 0}}; /**< Create a fence region */
 
 
 
@@ -229,6 +233,26 @@ void HorizontalAdvance(MovLayer *ml, Region *fence)
 }
 
 
+
+void VerticalAdvance(MovLayer *ml, Region *fence)
+{
+  Vec2 newPos;
+  Region shapeBoundary;
+  for (; ml; ml = ml->next) {
+    vec2Add(&newPos, &ml->layer->posNext, &ml->velocity);
+    abShapeGetBounds(ml->layer->abShape, &newPos, &shapeBoundary);
+      if ((shapeBoundary.topLeft.axes[1] < fence->topLeft.axes[1]) ||
+	  (shapeBoundary.botRight.axes[1] > fence->botRight.axes[1]) ) {
+	int velocity = ml->velocity.axes[1] = -ml->velocity.axes[1];
+	newPos.axes[1] += (2*velocity);
+      }	/**< if outside of fence */
+    ml->layer->posNext = newPos;
+  } /**< for ml */
+}
+
+
+
+
 int redrawScreen = 1;           /**< Boolean for whether screen needs to be redrawn */
 
 Region fieldFence;		/**< fence around playing field  */
@@ -250,9 +274,8 @@ void main()
   shapeInit();
 
   layerInit(&layer0);
-  //layerInit(&apple);
+  
   layerDraw(&layer0);
-  //layerDraw(&apple);
   
   
 
@@ -271,6 +294,7 @@ void main()
     P1OUT |= GREEN_LED;       /**< Green led on when CPU on */
     redrawScreen = 0;
     movLayerDraw(&ml0, &layer0);
+    movLayerDraw(&ml1, &layer1);
     movLayerDraw(&mapple, &apple);
   }
 }
@@ -286,9 +310,10 @@ void wdt_c_handler()
   if (count == 5) {
     
     if (p2sw_read()){
-      HorizontalAdvance(&ml0, &fence);
-      HorizontalAdvance(&mapple, &fieldFence);
-      redrawScreen = 1;}
+      VerticalAdvance(&ml1, &fence);
+    HorizontalAdvance(&ml0, &fence);
+    HorizontalAdvance(&mapple, &fence2);
+    redrawScreen = 1;}
     count = 0;
   }
     
