@@ -16,6 +16,10 @@
 
 #define GREEN_LED BIT6
 
+ 
+#define KirbyCenterWidth screenWidth/2
+#define KirbyCenterHeight screenHeight/2
+
 
 AbRect rect10 = {abRectGetBounds, abRectCheck, {10,10}}; /**< 10x10 rectangle */
 AbRArrow rightArrow = {abRArrowGetBounds, abRArrowCheck, 30};
@@ -39,7 +43,7 @@ Layer apple = {
   COLOR_RED,
   0,
 };
- 
+
 
 Layer layer6 = {		/**< GROUND LAYER */
   (AbShape *)&rectGround,
@@ -61,7 +65,7 @@ Layer layer5 = {		/**< GRASS LAYER */
 
 Layer layer4 = {		/**< KIRBY'S LEFT FOOT LAYER */
   (AbShape *)&circle6,
-  {(screenWidth/2)-10, (screenHeight/2)+10}, /**< bit below & right of center */
+  {KirbyCenterWidth-10, KirbyCenterHeight+10}, /**< bit below & right of center */
   {0,0}, {0,0},				    /* next & last pos */
   COLOR_MAGENTA,
   &layer5,
@@ -72,7 +76,7 @@ Layer layer4 = {		/**< KIRBY'S LEFT FOOT LAYER */
 
 Layer layer3 = {		/**< KIRBY'S BODY LAYER */
   (AbShape *)&circle14,
-  {screenWidth/2, screenHeight/2}, /**< center */
+  {KirbyCenterWidth, KirbyCenterHeight}, /**< center */
   {0,0}, {0,0},				    /* next & last pos */
   COLOR_PINK,
   &layer4,
@@ -80,7 +84,7 @@ Layer layer3 = {		/**< KIRBY'S BODY LAYER */
 
 Layer layer2 = {		/**< KIRBY'S SCLERA */
   (AbShape *)&circle4,
-  {screenWidth/2+8, screenHeight/2-8}, /**< center */
+  {KirbyCenterWidth+8, KirbyCenterHeight-8}, /**< center */
   {0,0}, {0,0},				    /* next & last pos */
   COLOR_BLACK,
   &layer3,
@@ -88,7 +92,7 @@ Layer layer2 = {		/**< KIRBY'S SCLERA */
 
 Layer layer1 = {		/**< KIRBY'S PUPIL */
   (AbShape *)&circle2,
-  {screenWidth/2+8, screenHeight/2-10}, /**< center */
+  {KirbyCenterWidth+8, KirbyCenterHeight-10}, /**< center */
   {0,0}, {0,0},				    /* next & last pos */
   COLOR_WHITE,
   &layer2,
@@ -96,7 +100,7 @@ Layer layer1 = {		/**< KIRBY'S PUPIL */
 
 Layer layer0 = {		/**< KIRBY'S RIGHT FOOT LAYER */
   (AbShape *)&circle6,
-  {(screenWidth/2)+10, (screenHeight/2)+10}, /**< bit below & right of center */
+  {(KirbyCenterWidth)+10, (KirbyCenterHeight)+10}, /**< bit below & right of center */
   {0,0}, {0,0},				    /* next & last pos */
   COLOR_MAGENTA,
   &layer1,
@@ -275,6 +279,9 @@ void main()
 
   layerInit(&layer0);
   
+  layer1.abShape -> getBounds = layer3.abShape -> getBounds;
+  layer2.abShape -> getBounds = layer3.abShape -> getBounds;
+  layer4.abShape -> getBounds = layer3.abShape -> getBounds;
   layerDraw(&layer0);
   
   
