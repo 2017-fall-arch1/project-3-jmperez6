@@ -34,7 +34,8 @@ AbRect rectGround = {abRectGetBounds, abRectCheck, {200, 40}};; /**< 10x10 recta
 
 u_int bgColor = COLOR_GRAY;
 
-
+Layer apple2;
+Layer mapple2;
 
 Layer apple = {
   (AbShape *) &circle5,
@@ -135,11 +136,11 @@ typedef struct MovLayer_s {
 
 /* initial value of {0,0} will be overwritten */
 
-MovLayer ml3 = { &layer3, {0,1}, 0}; /**< not all layers move */
+MovLayer ml3 = { &layer3, {0,1}, 0}; /**< Body and eyes only move up and down*/
 MovLayer ml2 = { &layer2, {0,1}, &ml3 };
 MovLayer ml1 = { &layer1, {0,1}, &ml2 }; 
 
-MovLayer ml4 = { &layer4, {1,0}, 0 };
+MovLayer ml4 = { &layer4, {1,0}, 0 }; //feet moving side to side
 MovLayer ml0 = { &layer0, {1,0}, &ml4 };
 
 MovLayer mapple = { &apple, {-1,0}, 0 };
@@ -254,6 +255,25 @@ void VerticalAdvance(MovLayer *ml, Region *fence)
   } /**< for ml */
 }
 
+void BodyJump(MovLayer *ml, Region *fence){
+  Vec2 newPos;
+  Region shapeBoundary;
+  int velocity;
+  //Check first if body will collide, if so, flip velocity
+  vec2Add(&newPos, &ml->layer->posNext, &ml->velocity);
+  abShapeGetBounds(ml->layer->abShape, &newPos, &shapeBoundary);
+  if ((shapeBoundary.topLeft.axes[1] < fence->topLeft.axes[1]) ||
+      (shapeBoundary.botRight.axes[1] > fence->botRight.axes[1]) ) {
+        velocity = ml->velocity.axes[1] = -ml->velocity.axes[1];
+  }/**< if outside of fence */
+  //Then just move up or down the body together.
+  for (; ml; ml = ml->next){
+    vec2Add(&newPos, &ml->layer->posNext, &ml->velocity);
+    newPos.axes[1] += (2*velocity);
+    ml->layer->posNext = newPos;
+  } /**< for ml */
+}
+
 
 
 
@@ -273,7 +293,7 @@ void main()
   configureClocks();
   lcd_init();
   shapeInit();
-  p2sw_init(1);
+  p2sw_init(15);
 
   shapeInit();
 
@@ -292,6 +312,9 @@ void main()
   enableWDTInterrupts();      /**< enable periodic interrupt */
   or_sr(0x8);	              /**< GIE (enable interrupts) */
 
+  char points[8] = {'P', 'o', 'i', 'n', 't', 's', ':'};
+  points[7] = 0;
+  drawString5x7(screenWidth/2-50, screenHeight-20, points, COLOR_BLACK, COLOR_WHITE);
 
   for(;;) { 
     while (!redrawScreen) { /**< Pause CPU if screen doesn't need updating */
@@ -300,6 +323,12 @@ void main()
     }
     P1OUT |= GREEN_LED;       /**< Green led on when CPU on */
     redrawScreen = 0;
+    u_int switches = p2sw_read(), i;
+    char str[5];
+    for (i = 0; i < 4; i++)
+      str[i] = (switches & (1<<i)) ? '-' : '0'+i;
+    str[4] = 0;
+    drawString5x7(screenWidth/2, screenHeight-20, str, COLOR_BLACK, COLOR_WHITE);
     movLayerDraw(&ml0, &layer0);
     movLayerDraw(&ml1, &layer1);
     movLayerDraw(&mapple, &apple);
@@ -307,20 +336,24 @@ void main()
 }
 
 /** Watchdog timer interrupt handler. 15 interrupts/sec */
-void wdt_c_handler()
-{
+void wdt_c_handler(){
   static short count = 0;
   static short obsCount = 0;
   P1OUT |= GREEN_LED;		      /**< Green LED on when cpu on */
   count ++;
   obsCount ++;
   if (count == 5) {
-    
-    if (p2sw_read()){
-      VerticalAdvance(&ml1, &fence);
+    u_int buttons = p2sw_read(), i;
+    char str[5];
+    for (i = 0; i < 4; i++)
+      str[i] = (buttons & (1<<i)) ? '-' : '1'+i;
+    str[4] = 0;
+    if (str[1] == '2'){
+      BodyJump(&ml1, &fence);
+    }
     HorizontalAdvance(&ml0, &fence);
     HorizontalAdvance(&mapple, &fence2);
-    redrawScreen = 1;}
+    redrawScreen = 1;
     count = 0;
   }
     
