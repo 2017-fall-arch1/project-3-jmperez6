@@ -195,7 +195,7 @@ void movLayerDraw(MovLayer *movLayers, Layer *layers)
 
 
 Region kirbyfence = {{KirbyCenterWidth-56, 1}, {KirbyCenterWidth-24, 94}};
-Region fence = {{1,0}, {screenWidth, 0}}; /**< Create a fence region */
+Region fence = {{-10,-10}, {screenWidth+30, screenHeight+30}}; /**< Create a fence region */
 
 
 
@@ -258,7 +258,7 @@ void VerticalAdvance(MovLayer *ml, Region *fence)
   } /**< for ml */
 }
 
-void BodyJump(MovLayer *ml, Region *fence){
+int BodyJump(MovLayer *ml, Region *fence){
   Vec2 newPos;
   Region shapeBoundary;
   int velocity =  ml->velocity.axes[1];
@@ -267,7 +267,7 @@ void BodyJump(MovLayer *ml, Region *fence){
   abShapeGetBounds(ml->layer->abShape, &newPos, &shapeBoundary);
   if ((shapeBoundary.topLeft.axes[1] < fence->topLeft.axes[1]) ||
       (shapeBoundary.botRight.axes[1] > fence->botRight.axes[1]) ) {
-        return;
+        return 0;
   }/**< if outside of fence */
   //Then just move up or down the body together.
   for (; ml; ml = ml->next){
@@ -276,9 +276,21 @@ void BodyJump(MovLayer *ml, Region *fence){
     newPos.axes[1] += (2*velocity);
     ml->layer->posNext = newPos;
   } /**< for ml */
+  return velocity;
 }
 
-void Gravity(MovLayer *ml, Region *fence){
+void FeetJump(MovLayer *ml, int Bodyvelocity){
+  Vec2 newPos;
+  //Then just move up or down the body together.
+  for (; ml; ml = ml->next){
+    ml->velocity.axes[1] = Bodyvelocity;
+    vec2Add(&newPos, &ml->layer->posNext, &ml->velocity);
+    newPos.axes[1] += (Bodyvelocity);
+    ml->layer->posNext = newPos;
+  } /**< for ml */
+}
+
+int Gravity(MovLayer *ml, Region *fence){
   Vec2 newPos;
   Region shapeBoundary;
   int velocity =  ml->velocity.axes[1];
@@ -287,7 +299,7 @@ void Gravity(MovLayer *ml, Region *fence){
   abShapeGetBounds(ml->layer->abShape, &newPos, &shapeBoundary);
   if ((shapeBoundary.topLeft.axes[1] < fence->topLeft.axes[1]) ||
       (shapeBoundary.botRight.axes[1] > fence->botRight.axes[1]) ) {
-    return;
+    return 0;
   }/**< if outside of fence */
   //Then just move up or down the body together.
   for (; ml; ml = ml->next){
@@ -296,6 +308,7 @@ void Gravity(MovLayer *ml, Region *fence){
     newPos.axes[1] += (2*velocity);
     ml->layer->posNext = newPos;
   } /**< for ml */
+  return velocity;
 }
 
 
@@ -391,16 +404,16 @@ void wdt_c_handler(){
   static short count = 0;
   static short obsCount = 0;
   Region bodyBounds;
-  Region appleBounds;
+  //Region appleBounds;
   P1OUT |= GREEN_LED;		      /**< Green LED on when cpu on */
   count ++;
   obsCount ++;
   if (count == 5) {
     layerGetBounds(ml3.layer, &bodyBounds);
-    layerGetBounds(mapple.layer, &appleBounds);
-    int bool1 = (appleBounds.topLeft.axes[1] <= bodyBounds.topLeft.axes[1] & appleBounds.botRight.axes[1] >= bodyBounds.botRight.axes[1] & appleBounds.topLeft.axes[0] <= bodyBounds.botRight.axes[0]);
-    int bool2 = (appleBounds.botRight.axes[1] <= bodyBounds.topLeft.axes[1] & appleBounds.topLeft.axes[0] >= bodyBounds.topLeft.axes[0] & appleBounds.botRight.axes[0] <= bodyBounds.botRight.axes[0]);
-    int bool3 = (appleBounds.topLeft.axes[1] >= bodyBounds.botRight.axes[1] & appleBounds.topLeft.axes[0] >= bodyBounds.topLeft.axes[0] & appleBounds.botRight.axes[0] <= bodyBounds.botRight.axes[0]);
+    //layerGetBounds(mapple.layer, &appleBounds);
+    int bool1 = (mapple.layer -> pos.axes[1] >= bodyBounds.topLeft.axes[1] & mapple.layer -> pos.axes[1] <= bodyBounds.botRight.axes[1] & mapple.layer -> pos.axes[0] <= bodyBounds.botRight.axes[0]);
+    // int bool2 = (appleBounds.botRight.axes[1] <= bodyBounds.topLeft.axes[1] & appleBounds.topLeft.axes[0] >= bodyBounds.topLeft.axes[0] & appleBounds.botRight.axes[0] <= bodyBounds.botRight.axes[0]);
+    //int bool3 = (appleBounds.topLeft.axes[1] >= bodyBounds.botRight.axes[1] & appleBounds.topLeft.axes[0] >= bodyBounds.topLeft.axes[0] & appleBounds.botRight.axes[0] <= bodyBounds.botRight.axes[0]);
     u_int buttons = p2sw_read(), i;
     char btn[5];
     for (i = 0; i < 4; i++)
@@ -408,8 +421,8 @@ void wdt_c_handler(){
     btn[4] = 0;
     if (btn[1] == '2'){
       ml3.velocity.axes[1] = -1;
-      if(bool1 || bool2 || bool3){
-        mapple.layer -> pos.axes[0] = screenWidth+50;
+      if(bool1){
+        mapple.layer -> posNext.axes[0] = screenWidth+50;
         pts += 1;
         //*str = toArray(pts);
         int c = 3;
@@ -422,7 +435,9 @@ void wdt_c_handler(){
 	  c -= 1;
         }
       }
-      BodyJump(&ml3, &kirbyfence);
+      int v;
+      v = BodyJump(&ml3, &kirbyfence);
+      FeetJump(&ml0, v);
     }
     if (btn[3] == '4'){
       pts += 1;
@@ -440,11 +455,13 @@ void wdt_c_handler(){
     //if button is not pressed, call Gravity.
     else if (btn[1] != '2'){
       ml3.velocity.axes[1] = 1;
-      Gravity(&ml3, &kirbyfence);
+      int v;
+      v = Gravity(&ml3, &kirbyfence);
+      FeetJump(&ml0, v);
     }
     
-    if(bool1 || bool2 || bool3){
-      mapple.layer -> pos.axes[0] = screenWidth+50;
+    if(bool1){
+      mapple.layer -> posNext.axes[0] = screenWidth+50;
       pts += 1;
       //*str = toArray(pts);
       int c = 3;
@@ -457,6 +474,23 @@ void wdt_c_handler(){
 	c -= 1;
       }
     }
+
+
+    if(mapple.layer -> pos.axes[0] <= 5){
+      mapple.layer -> posNext.axes[0] = screenWidth+50;
+      pts -= 1;
+      //*str = toArray(pts);
+      int c = 3;
+      int temp = pts;
+      while(temp > 0){
+	if(c < 0){break;}
+	int digit = temp % 10;
+	str[c] = digit + '0';
+	temp /= 10;
+	c -= 1;
+      }
+    }
+
     
     HorizontalAdvance(&ml0, &kirbyfence);
     HorizontalAdvance(&mapple, &fence);
