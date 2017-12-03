@@ -19,11 +19,16 @@
 
 #define GREEN_LED BIT6
 
+/*#define AppleBody circle5
+#define AppleLeg circle2
+#define AppleBound circle5.getBounds
+#define AppleCheck circle5.check
+*/
  
 #define KirbyCenterWidth screenWidth/2
 #define KirbyCenterHeight screenHeight/2
 
-
+//AbApple apple5 = {AppleBound, AppleCheck, AppleBody, AppleLeg, AppleLeg};
 AbRect rect10 = {abRectGetBounds, abRectCheck, {10,10}}; /**< 10x10 rectangle */
 AbRArrow rightArrow = {abRArrowGetBounds, abRArrowCheck, 30};
 
@@ -40,6 +45,32 @@ u_int bgColor = COLOR_GRAY;
 Layer apple2;
 Layer mapple2;
 
+/*
+Layer brickwall = {
+  (AbShape *) &rightArrow,
+  {screenWidth+50, 10},
+  {0,0}, {0,0},
+  COLOR_FIREBRICK,
+  0,
+};*/
+
+/*
+Layer applerightstump = {
+  (AbShape *) &circle2,
+  {screenWidth+52,15},
+  {0,0}, {0,0},	
+  COLOR_RED,
+  0,
+};
+
+Layer appleleftstump = {
+  (AbShape *) &circle2,
+  {screenWidth+48,15},
+  {0,0}, {0,0},	
+  COLOR_RED,
+  &applerightstump,
+};
+*/
 Layer apple = {
   (AbShape *) &circle5,
   {screenWidth+50,10},/**< top right corner */
@@ -146,7 +177,10 @@ MovLayer ml1 = { &layer1, {0,-1}, 0}; /**< Body and eyes only move up and down*/
 MovLayer ml2 = { &layer2, {0,-1}, &ml1 };
 MovLayer ml3 = { &layer3, {0,-1}, &ml2 }; 
 
-MovLayer mapple = { &apple, {-1,0}, 0 };
+//MovLayer mwall = { &brickwall, {-1,0}, 0 };
+MovLayer mapple = { &apple, {-3,0}, 0 };
+//MovLayer mapplels = { &appleleftstump, {-3,0}, &mapple };
+//MovLayer mapplers = { &applerightstump, {-3,0}, &mapplels };
 
 
 
@@ -312,18 +346,29 @@ int Gravity(MovLayer *ml, Region *fence){
 }
 
 
-/*
-char* toArray(int number){
-  int n = log10(number) + 1;
-  int i;
-  char *numberArray = calloc(n, sizeof(char));
-  for ( i = 0; i < n; ++i, number /= 10){
-    numberArray[i] = number % 10;
-  }
-  return numberArray;
-}*/
+void buzzer_init(){
+    /* 
+       Direct timer A output "TA0.1" to P2.6.  
+        According to table 21 from data sheet:
+          P2SEL2.6, P2SEL2.7, anmd P2SEL.7 must be zero
+          P2SEL.6 must be 1
+        Also: P2.6 direction must be output
+    */
+    timerAUpmode();		/* used to drive speaker */
+    P2SEL2 &= ~(BIT6 | BIT7);
+    P2SEL &= ~BIT7; 
+    P2SEL |= BIT6;
+    P2DIR = BIT6;		/* enable output to speaker (P2.6) */
+
+   
+}
 
 
+void buzzer_set_period(short cycles)
+{
+  CCR0 = cycles; 
+  CCR1 = cycles >> 1;		/* one half cycle */
+}
 
 
 
@@ -344,6 +389,7 @@ void main()
 
   configureClocks();
   lcd_init();
+  buzzer_init();
   shapeInit();
   p2sw_init(15);
 
@@ -352,10 +398,6 @@ void main()
   layerInit(&layer0);
   
   layerDraw(&layer0);
-
-
-  //layer1.abShape -> getBounds = layer3.abShape -> getBounds;
-  //layer2.abShape -> getBounds = layer3.abShape -> getBounds;
     
 
   layerGetBounds(&fieldLayer, &fieldFence);
@@ -396,19 +438,22 @@ void main()
     movLayerDraw(&ml0, &layer0);
     movLayerDraw(&ml3, &layer1);
     movLayerDraw(&mapple, &apple);
+    //movLayerDraw(&mwall, &wall);
   }
 }
-
+static short obsCount = 0;
 /** Watchdog timer interrupt handler. 15 interrupts/sec */
 void wdt_c_handler(){
   static short count = 0;
-  static short obsCount = 0;
+  
+  int applehit = 0;
+  int wallhit = 0;
   Region bodyBounds;
   //Region appleBounds;
   P1OUT |= GREEN_LED;		      /**< Green LED on when cpu on */
   count ++;
   obsCount ++;
-  if (count == 5) {
+  if (count == 10) {
     layerGetBounds(ml3.layer, &bodyBounds);
     //layerGetBounds(mapple.layer, &appleBounds);
     int bool1 = (mapple.layer -> pos.axes[1] >= bodyBounds.topLeft.axes[1] & mapple.layer -> pos.axes[1] <= bodyBounds.botRight.axes[1] & mapple.layer -> pos.axes[0] <= bodyBounds.botRight.axes[0]);
@@ -421,9 +466,15 @@ void wdt_c_handler(){
     btn[4] = 0;
     if (btn[1] == '2'){
       ml3.velocity.axes[1] = -1;
-      if(bool1){
+      if(bool1 & !applehit){
+	buzzer_set_period(8000);
+	int max = (screenHeight/2);
+        int currentpos = mapple.layer -> pos.axes[1];
+        int randpos = (currentpos * 3) % max;
+	mapple.layer -> posNext.axes[1] = randpos;
         mapple.layer -> posNext.axes[0] = screenWidth+50;
         pts += 1;
+	applehit = 1;
         //*str = toArray(pts);
         int c = 3;
         int temp = pts;
@@ -434,24 +485,13 @@ void wdt_c_handler(){
 	  temp /= 10;
 	  c -= 1;
         }
+	buzzer_set_period(0);
       }
       int v;
       v = BodyJump(&ml3, &kirbyfence);
       FeetJump(&ml0, v);
     }
-    if (btn[3] == '4'){
-      pts += 1;
-      //*str = toArray(pts);
-      int c = 3;
-      int temp = pts;
-      while(temp > 0){
-	if(c < 0){break;}
-	int digit = temp % 10;
-	str[c] = digit + '0';
-	temp /= 10;
-	c -= 1;
-      }
-    }
+    
     //if button is not pressed, call Gravity.
     else if (btn[1] != '2'){
       ml3.velocity.axes[1] = 1;
@@ -460,9 +500,16 @@ void wdt_c_handler(){
       FeetJump(&ml0, v);
     }
     
-    if(bool1){
+    if(bool1 & !applehit){
+      int max = (screenHeight/2);
+      int currentpos = mapple.layer -> pos.axes[1];
+      int randpos = (currentpos * 3) % max;
+      buzzer_set_period(8000);
       mapple.layer -> posNext.axes[0] = screenWidth+50;
+      mapple.layer -> posNext.axes[1] = randpos;
+      
       pts += 1;
+      applehit = 1;
       //*str = toArray(pts);
       int c = 3;
       int temp = pts;
@@ -473,11 +520,17 @@ void wdt_c_handler(){
 	temp /= 10;
 	c -= 1;
       }
+      buzzer_set_period(0);
     }
 
 
-    if(mapple.layer -> pos.axes[0] <= 5){
+    if(mapple.layer -> pos.axes[0] <= 5  & !applehit){
+      int max = (screenHeight/2);
+      int currentpos = mapple.layer -> pos.axes[1];
+      int randpos = (currentpos * 3) % max;
+      buzzer_set_period(4000);
       mapple.layer -> posNext.axes[0] = screenWidth+50;
+      mapple.layer -> posNext.axes[1] = randpos;
       pts -= 1;
       //*str = toArray(pts);
       int c = 3;
@@ -489,11 +542,27 @@ void wdt_c_handler(){
 	temp /= 10;
 	c -= 1;
       }
+      buzzer_set_period(0);
     }
+ 
+    /*if(mwall.layer -> pos.axes[0] <= 5  & !wallhit){
+      mwall.layer -> posNext.axes[0] = screenWidth+50;
+      //int max = (screenHeight-50);
+      //int randpos = ( (max + 1) - 0) + 0;
+      //mwall.layer -> posNext.axes[1] = randpos;
+      }*/
 
+
+    if(pts < 0){
+      char gameover[12] = {'G', 'A', 'M', 'E', ' ', 'O', 'V', 'E', 'R', ' '};
+      gameover[11] = 0;
+      drawString5x7(screenWidth/2-15, screenHeight/2-15, gameover, COLOR_RED, COLOR_BLACK);
+      return;
+    }
     
     HorizontalAdvance(&ml0, &kirbyfence);
     HorizontalAdvance(&mapple, &fence);
+    //HorizontalAdvance(&mwall, &fence);
     redrawScreen = 1;
     count = 0;
   }
