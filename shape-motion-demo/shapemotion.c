@@ -441,10 +441,14 @@ void main()
     //movLayerDraw(&mwall, &wall);
   }
 }
-static short obsCount = 0;
-/** Watchdog timer interrupt handler. 15 interrupts/sec */
+static int obsCount = 0;
+//static int levelchange = 0;
+static int level = 8;
+static int max = (screenHeight/2)+10;
+/** Watchdog timer interrupt handler. 8 interrupts/sec */
 void wdt_c_handler(){
   static short count = 0;
+  //long time = WDTCTL;
   
   int applehit = 0;
   int wallhit = 0;
@@ -453,7 +457,8 @@ void wdt_c_handler(){
   P1OUT |= GREEN_LED;		      /**< Green LED on when cpu on */
   count ++;
   obsCount ++;
-  if (count == 10) {
+  
+  if (count == level) {
     layerGetBounds(ml3.layer, &bodyBounds);
     //layerGetBounds(mapple.layer, &appleBounds);
     int bool1 = (mapple.layer -> pos.axes[1] >= bodyBounds.topLeft.axes[1] & mapple.layer -> pos.axes[1] <= bodyBounds.botRight.axes[1] & mapple.layer -> pos.axes[0] <= bodyBounds.botRight.axes[0]);
@@ -464,13 +469,13 @@ void wdt_c_handler(){
     for (i = 0; i < 4; i++)
       btn[i] = (buttons & (1<<i)) ? ' ' : '1'+i;
     btn[4] = 0;
-    if (btn[1] == '2'){
+    if (btn[1] == '2'){ 
       ml3.velocity.axes[1] = -1;
       if(bool1 & !applehit){
-	buzzer_set_period(8000);
-	int max = (screenHeight/2);
+	buzzer_set_period(80);
+	
         int currentpos = mapple.layer -> pos.axes[1];
-        int randpos = (currentpos * 3) % max;
+        int randpos = (currentpos + (obsCount)) % max;
 	mapple.layer -> posNext.axes[1] = randpos;
         mapple.layer -> posNext.axes[0] = screenWidth+50;
         pts += 1;
@@ -501,10 +506,10 @@ void wdt_c_handler(){
     }
     
     if(bool1 & !applehit){
-      int max = (screenHeight/2);
+      //int max = (screenHeight/2);
       int currentpos = mapple.layer -> pos.axes[1];
-      int randpos = (currentpos * 3) % max;
-      buzzer_set_period(8000);
+      int randpos = (currentpos + (obsCount)) % max;
+      buzzer_set_period(80);
       mapple.layer -> posNext.axes[0] = screenWidth+50;
       mapple.layer -> posNext.axes[1] = randpos;
       
@@ -524,11 +529,11 @@ void wdt_c_handler(){
     }
 
 
-    if(mapple.layer -> pos.axes[0] <= 5  & !applehit){
-      int max = (screenHeight/2);
+    if(mapple.layer -> pos.axes[0] <= 2  & !applehit){
+      //int max = (screenHeight/2);
       int currentpos = mapple.layer -> pos.axes[1];
-      int randpos = (currentpos * 3) % max;
-      buzzer_set_period(4000);
+      int randpos = (currentpos + (obsCount)) % max;
+      buzzer_set_period(40);
       mapple.layer -> posNext.axes[0] = screenWidth+50;
       mapple.layer -> posNext.axes[1] = randpos;
       pts -= 1;
@@ -559,12 +564,14 @@ void wdt_c_handler(){
       drawString5x7(screenWidth/2-15, screenHeight/2-15, gameover, COLOR_RED, COLOR_BLACK);
       return;
     }
+
     
     HorizontalAdvance(&ml0, &kirbyfence);
     HorizontalAdvance(&mapple, &fence);
     //HorizontalAdvance(&mwall, &fence);
     redrawScreen = 1;
     count = 0;
+    
   }
     
   P1OUT &= ~GREEN_LED;		    /**< Green LED off when cpu off */
