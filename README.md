@@ -1,3 +1,24 @@
+Project 3: Kirby Apple Catch Game
+
+To Play: change directory to the shape-motion-demo folder.
+From there, simply call "make load" and the game will load on the connected MSP430.
+
+Description: A simple catch game where apples randomly appear and move to towards you and you, as Kirby, have to catch them.
+Use the 2nd switch to jump to catch them and get points, as shown on the point counter in the bottom of the screen.
+If your points go below zero, it is game over and a small game over screen appears.
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Project 3: LCD Game
 ## Introduction
 
