@@ -1,3 +1,4 @@
+	.global InterruptGame
 	.file	"_wdt_handler.c"
 .text
 	.balign 2
@@ -56,3 +57,5 @@ ball_no_move:
 	.local	count
 	.comm	count,1,1
 	.ident	"GCC: (GNU) 4.9.1 20140707 (prerelease (msp430-14r1-364)) (GNUPro 14r1) (Based on: GCC 4.8 GDB 7.7 Binutils 2.24 Newlib 2.1)"
+InterruptGame:
+	

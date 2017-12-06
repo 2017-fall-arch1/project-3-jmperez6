@@ -1,7 +1,7 @@
 /** \file shapemotion.c
- *  \brief This is a simple shape motion demo.
- *  This demo creates two layers containing shapes.
- *  One layer contains a rectangle and the other a circle.
+ *  \brief This is a simple catch game where the main
+ *  character is Kirby and you're trying to catch the
+ *  apples that appear from the right side.
  *  While the CPU is running the green LED is on, and
  *  when the screen does not need to be redrawn the CPU
  *  is turned off along with the green LED.
@@ -447,23 +447,21 @@ static int level = 8;
 static int max = (screenHeight/2)+10;
 /** Watchdog timer interrupt handler. 8 interrupts/sec */
 void wdt_c_handler(){
+  //InterruptGame();
   static short count = 0;
-  //long time = WDTCTL;
+  
   
   int applehit = 0;
   int wallhit = 0;
   Region bodyBounds;
-  //Region appleBounds;
+  
   P1OUT |= GREEN_LED;		      /**< Green LED on when cpu on */
   count ++;
   obsCount ++;
   
   if (count == level) {
     layerGetBounds(ml3.layer, &bodyBounds);
-    //layerGetBounds(mapple.layer, &appleBounds);
     int bool1 = (mapple.layer -> pos.axes[1] >= bodyBounds.topLeft.axes[1] & mapple.layer -> pos.axes[1] <= bodyBounds.botRight.axes[1] & mapple.layer -> pos.axes[0] <= bodyBounds.botRight.axes[0]);
-    // int bool2 = (appleBounds.botRight.axes[1] <= bodyBounds.topLeft.axes[1] & appleBounds.topLeft.axes[0] >= bodyBounds.topLeft.axes[0] & appleBounds.botRight.axes[0] <= bodyBounds.botRight.axes[0]);
-    //int bool3 = (appleBounds.topLeft.axes[1] >= bodyBounds.botRight.axes[1] & appleBounds.topLeft.axes[0] >= bodyBounds.topLeft.axes[0] & appleBounds.botRight.axes[0] <= bodyBounds.botRight.axes[0]);
     u_int buttons = p2sw_read(), i;
     char btn[5];
     for (i = 0; i < 4; i++)
@@ -480,7 +478,6 @@ void wdt_c_handler(){
         mapple.layer -> posNext.axes[0] = screenWidth+50;
         pts += 1;
 	applehit = 1;
-        //*str = toArray(pts);
         int c = 3;
         int temp = pts;
         while(temp > 0){
@@ -515,7 +512,6 @@ void wdt_c_handler(){
       
       pts += 1;
       applehit = 1;
-      //*str = toArray(pts);
       int c = 3;
       int temp = pts;
       while(temp > 0){
@@ -537,7 +533,6 @@ void wdt_c_handler(){
       mapple.layer -> posNext.axes[0] = screenWidth+50;
       mapple.layer -> posNext.axes[1] = randpos;
       pts -= 1;
-      //*str = toArray(pts);
       int c = 3;
       int temp = pts;
       while(temp > 0){
