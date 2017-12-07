@@ -1,4 +1,4 @@
-	.global InterruptGame
+	.global CanInterrupt
 	.file	"_wdt_handler.c"
 .text
 	.balign 2
