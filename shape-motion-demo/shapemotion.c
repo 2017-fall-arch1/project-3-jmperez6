@@ -456,9 +456,11 @@ void wdt_c_handler(){
   Region bodyBounds;
   
   P1OUT |= GREEN_LED;		      /**< Green LED on when cpu on */
-  count ++;
+  //count ++;
   obsCount ++;
+	
   CanInterrupt(count);
+	
   if (count == level) {
     layerGetBounds(ml3.layer, &bodyBounds);
     int bool1 = (mapple.layer -> pos.axes[1] >= bodyBounds.topLeft.axes[1] & mapple.layer -> pos.axes[1] <= bodyBounds.botRight.axes[1] & mapple.layer -> pos.axes[0] <= bodyBounds.botRight.axes[0]);
