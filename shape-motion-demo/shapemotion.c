@@ -313,6 +313,8 @@ int BodyJump(MovLayer *ml, Region *fence){
   return velocity;
 }
 
+
+/*
 void FeetJump(MovLayer *ml, int Bodyvelocity){
   Vec2 newPos;
   //Then just move up or down the body together.
@@ -321,9 +323,9 @@ void FeetJump(MovLayer *ml, int Bodyvelocity){
     vec2Add(&newPos, &ml->layer->posNext, &ml->velocity);
     newPos.axes[1] += (Bodyvelocity);
     ml->layer->posNext = newPos;
-  } /**< for ml */
+  } 
 }
-
+*/
 int Gravity(MovLayer *ml, Region *fence){
   Vec2 newPos;
   Region shapeBoundary;
@@ -476,7 +478,8 @@ void wdt_c_handler(){
         int randpos = (currentpos + (obsCount)) % max;
 	mapple.layer -> posNext.axes[1] = randpos;
         mapple.layer -> posNext.axes[0] = screenWidth+50;
-        pts += 1;
+        //pts += 1;
+	pts = addPts(pts);
 	applehit = 1;
         int c = 3;
         int temp = pts;
@@ -491,7 +494,8 @@ void wdt_c_handler(){
       }
       int v;
       v = BodyJump(&ml3, &kirbyfence);
-      FeetJump(&ml0, v);
+      FeetJump(&ml0, ml0.layer, v);
+      FeetJump(&ml4, ml4.layer, v);
     }
     
     //if button is not pressed, call Gravity.
@@ -499,7 +503,8 @@ void wdt_c_handler(){
       ml3.velocity.axes[1] = 1;
       int v;
       v = Gravity(&ml3, &kirbyfence);
-      FeetJump(&ml0, v);
+      FeetJump(&ml0, ml0.layer, v);
+      FeetJump(&ml4, ml4.layer, v);
     }
     
     if(bool1 & !applehit){
@@ -510,7 +515,8 @@ void wdt_c_handler(){
       mapple.layer -> posNext.axes[0] = screenWidth+50;
       mapple.layer -> posNext.axes[1] = randpos;
       
-      pts += 1;
+      //pts += 1;
+      pts = addPts(pts);
       applehit = 1;
       int c = 3;
       int temp = pts;

@@ -1,4 +1,5 @@
-	.global InterruptGame
+	.global addPts
+	.global FeetJump
 	.file	"_wdt_handler.c"
 .text
 	.balign 2
@@ -57,5 +58,21 @@ ball_no_move:
 	.local	count
 	.comm	count,1,1
 	.ident	"GCC: (GNU) 4.9.1 20140707 (prerelease (msp430-14r1-364)) (GNUPro 14r1) (Based on: GCC 4.8 GDB 7.7 Binutils 2.24 Newlib 2.1)"
-InterruptGame:
+addPts:	
+	add #1, R12
+	ret
+	
+FeetJump: 			;R12 is moving layer, R13 is layer R14 is velocity
+	mov #0, R4		;temporary variable
+
+	mov R14, 4(R12)		;ml->velocity.axes[1] = Bodyvelocity
+
+	;; begin vec2Add()
+	mov 4(R12), R4		;temp = ml->velocity.axes[1]
+	add 12(R13), R4		;temp += layer->posNext.axes[1]
+	;; end vec2Add()
+	add R14, R4		;temp += Bodyvelocity
+	mov R4, 12(R13)		;layer->posNext.axes[1] = temp 
+
+	ret
 	
